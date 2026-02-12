@@ -1,12 +1,28 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Receipt, Product, StockMovement, MovementType, CompanyInfo } from './types';
+import { Receipt, Product, StockMovement, CompanyInfo } from './types';
 import ReceiptForm from './components/ReceiptForm';
 import ReceiptPreview from './components/ReceiptPreview';
 import SalesAnalysis from './components/SalesAnalysis';
 import StockManager from './components/StockManager';
 import VoucherTracker from './components/VoucherTracker';
-import { Layout, FileText, Sparkles, ZoomIn, ZoomOut, CheckCircle2, BarChart3, Mail, MessageSquare, Download, Save, Boxes, Maximize, ClipboardList, Settings, X, Building2, MapPin, Phone, Info, Store } from 'lucide-react';
+import { 
+  FileText, 
+  ZoomIn, 
+  ZoomOut, 
+  CheckCircle2, 
+  BarChart3, 
+  MapPin, 
+  Store, 
+  ChevronDown, 
+  Layout, 
+  Maximize, 
+  ClipboardList, 
+  Boxes,
+  RefreshCw,
+  Save,
+  Download
+} from 'lucide-react';
 
 const CORPORATE_IDENTITY = {
   name: 'ab Desai & Co. Ltd',
@@ -28,9 +44,7 @@ const BRANCH_PRESETS = [
 
 const DEFAULT_SENDER: CompanyInfo = {
   ...CORPORATE_IDENTITY,
-  shopName: 'CASCAVELLE',
-  address: 'Cascavelle Shopping Village, Flic en Flac Road, Mauritius',
-  phone: '489 7777',
+  ...BRANCH_PRESETS[5], // Default to Cascavelle
 };
 
 const INITIAL_STATE: Receipt = {
@@ -44,11 +58,9 @@ const INITIAL_STATE: Receipt = {
   clientEmail: '',
   addressNotes: '',
   paymentMethod: 'Cash',
-  items: [
-    { id: '1', code: '', description: 'Enter your first item description...', quantity: 1, rate: 0 }
-  ],
+  items: [{ id: '1', code: '', description: '', quantity: 1, rate: 0 }],
   chequeNo: '',
-  settlementOf: 'Current Order',
+  settlementOf: 'Full settlement of above.',
   currency: 'MUR',
   taxRate: 15,
   location: 'cascavelle',
@@ -57,25 +69,25 @@ const INITIAL_STATE: Receipt = {
 };
 
 const HeaderLogo: React.FC = () => (
-  <div className="border border-white/20 p-[2px] bg-white flex flex-col items-center w-12 shrink-0">
+  <div className="border border-white/20 p-[1px] bg-white flex flex-col items-center w-10 shrink-0">
     <div className="bg-[#c02428] w-full flex items-center justify-center py-0.5">
-      <span className="text-white text-[10px] font-black leading-none tracking-tighter">ab</span>
+      <span className="text-white text-[9px] font-black leading-none">ab</span>
     </div>
     <div className="flex items-center justify-center bg-white w-full py-0.5">
-      <span className="text-[#c02428] text-[8px] font-black leading-none italic mr-[0.5px]">D</span>
-      <span className="text-slate-900 text-[8px] font-black leading-none tracking-tighter">esai</span>
+      <span className="text-[#c02428] text-[7px] font-black italic">D</span>
+      <span className="text-slate-900 text-[7px] font-black">esai</span>
     </div>
   </div>
 );
 
 const App: React.FC = () => {
   const [shopSettings, setShopSettings] = useState<CompanyInfo>(() => {
-    const saved = localStorage.getItem('shop_settings_v2');
+    const saved = localStorage.getItem('shop_settings_v3');
     return saved ? JSON.parse(saved) : DEFAULT_SENDER;
   });
 
   const [receipt, setReceipt] = useState<Receipt>(() => {
-    const saved = localStorage.getItem('last_receipt_v4');
+    const saved = localStorage.getItem('last_receipt_v5');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -88,490 +100,229 @@ const App: React.FC = () => {
   });
 
   const [productList, setProductList] = useState<Product[]>(() => {
-    const saved = localStorage.getItem('user_product_inventory');
+    const saved = localStorage.getItem('inventory_v1');
     return saved ? JSON.parse(saved) : [];
   });
 
   const [receiptHistory, setReceiptHistory] = useState<Receipt[]>(() => {
-    const saved = localStorage.getItem('receipt_history_v4');
+    const saved = localStorage.getItem('history_v1');
     return saved ? JSON.parse(saved) : [];
   });
 
   const [movements, setMovements] = useState<StockMovement[]>(() => {
-    const saved = localStorage.getItem('stock_movements_v1');
+    const saved = localStorage.getItem('movements_v1');
     return saved ? JSON.parse(saved) : [];
   });
 
   const [activeTab, setActiveTab] = useState<'form' | 'preview' | 'analysis' | 'stock' | 'tracker'>('form');
-  const [scale, setScale] = useState(1);
-  const [autoScaleFactor, setAutoScaleFactor] = useState(1);
+  const [scale, setScale] = useState(0.85);
+  const [showBranchMenu, setShowBranchMenu] = useState(false);
   const [isEditingExisting, setIsEditingExisting] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const docToPrintRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    localStorage.setItem('shop_settings_v2', JSON.stringify(shopSettings));
+    localStorage.setItem('shop_settings_v3', JSON.stringify(shopSettings));
     setReceipt(prev => ({ ...prev, sender: shopSettings, location: shopSettings.shopName?.toLowerCase() }));
   }, [shopSettings]);
 
-  useEffect(() => {
-    localStorage.setItem('last_receipt_v4', JSON.stringify(receipt));
-  }, [receipt]);
+  useEffect(() => localStorage.setItem('last_receipt_v5', JSON.stringify(receipt)), [receipt]);
+  useEffect(() => localStorage.setItem('inventory_v1', JSON.stringify(productList)), [productList]);
+  useEffect(() => localStorage.setItem('history_v1', JSON.stringify(receiptHistory)), [receiptHistory]);
+  useEffect(() => localStorage.setItem('movements_v1', JSON.stringify(movements)), [movements]);
 
-  useEffect(() => {
-    localStorage.setItem('user_product_inventory', JSON.stringify(productList));
-  }, [productList]);
-
-  useEffect(() => {
-    localStorage.setItem('receipt_history_v4', JSON.stringify(receiptHistory));
-  }, [receiptHistory]);
-
-  useEffect(() => {
-    localStorage.setItem('stock_movements_v1', JSON.stringify(movements));
-  }, [movements]);
-
-  const calculateAutoScale = () => {
-    if (containerRef.current) {
-      const padding = 80; 
-      const containerWidth = containerRef.current.clientWidth - padding;
-      const docWidth = (activeTab === 'analysis' || activeTab === 'stock' || activeTab === 'tracker') ? 793 : 770; 
-      const newScale = Math.min(containerWidth / docWidth, 1.1);
-      setAutoScaleFactor(newScale);
-      setScale(newScale);
-    }
-  };
-
-  useEffect(() => {
-    const handleResize = () => calculateAutoScale();
-    window.addEventListener('resize', handleResize);
-    const timer = setTimeout(calculateAutoScale, 100);
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      clearTimeout(timer);
-    };
-  }, [activeTab]);
-
-  const handleUpdate = (updates: Partial<Receipt>) => {
-    setReceipt(prev => ({ ...prev, ...updates }));
-  };
+  const handleUpdate = (updates: Partial<Receipt>) => setReceipt(prev => ({ ...prev, ...updates }));
 
   const handleRecall = (recalledReceipt: Receipt, targetTab: 'form' | 'preview' = 'form') => {
-    const freshData = JSON.parse(JSON.stringify(recalledReceipt)) as Receipt;
-    setReceipt(freshData);
+    setReceipt({ ...recalledReceipt });
     setIsEditingExisting(true);
     setActiveTab(targetTab);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleUpdateLinkedId = (type: 'RECEIPT' | 'TRANSFER_OUT' | 'TRANSFER_IN', primaryId: string, newLinkedId: string) => {
-    if (type === 'RECEIPT') {
-      setReceiptHistory(prev => prev.map(r => {
-        if (String(r.receiptNumber) === primaryId) {
-          return { ...r, relatedInvoiceNo: newLinkedId };
-        }
-        return r;
-      }));
-
-      if (String(receipt.receiptNumber) === primaryId) {
-        setReceipt(prev => ({ ...prev, relatedInvoiceNo: newLinkedId }));
-      }
-    }
-
-    setMovements(prev => prev.map(m => {
-      if (String(m.reference) === primaryId) {
-        return { ...m, associatedWtn: newLinkedId };
-      }
-      return m;
-    }));
   };
 
   const validateAndPost = () => {
     const hasItems = receipt.items.some(i => i.description && i.rate > 0);
     if (!receipt.receivedFrom || !hasItems) {
-      alert("Validation Failed: Please ensure Customer Name and at least one item are filled.");
+      alert("Missing customer name or item data.");
       return;
     }
+
+    const currentReceipt = { ...receipt };
     
-    const validatedReceipt = JSON.parse(JSON.stringify(receipt)) as Receipt;
-    
-    const salesMovements: StockMovement[] = validatedReceipt.items.map(item => ({
+    // Update Stock Movements for this sale
+    const newMovements: StockMovement[] = receipt.items.map(item => ({
       id: Math.random().toString(36).substr(2, 9),
-      date: validatedReceipt.date,
-      itemCode: item.code || 'NO-CODE',
+      date: receipt.date,
+      itemCode: item.code || 'NA',
       itemName: item.description,
       type: 'SALE',
-      reference: validatedReceipt.receiptNumber,
-      associatedWtn: validatedReceipt.relatedInvoiceNo, 
+      reference: receipt.receiptNumber,
+      associatedWtn: receipt.relatedInvoiceNo,
       quantity: item.quantity,
-      location: validatedReceipt.receivedFrom || 'CASH SALE',
-      notes: `Sale at ${shopSettings.shopName} to ${validatedReceipt.receivedFrom}`
+      location: shopSettings.shopName || 'STORE',
+      notes: `Sale to ${receipt.receivedFrom}`
     }));
 
-    if (isEditingExisting) {
-      setMovements(prev => {
-        const otherMovements = prev.filter(m => !(m.type === 'SALE' && String(m.reference) === String(validatedReceipt.receiptNumber)));
-        return [...salesMovements, ...otherMovements];
-      });
-    } else {
-      setMovements(prev => [...salesMovements, ...prev]);
-    }
-
-    setReceiptHistory(prev => {
-      const existingIdx = prev.findIndex(r => String(r.receiptNumber) === String(validatedReceipt.receiptNumber));
-      if (existingIdx !== -1) {
-        const newHistory = [...prev];
-        newHistory[existingIdx] = validatedReceipt;
-        return newHistory;
-      }
-      return [validatedReceipt, ...prev];
-    });
-
-    if (isEditingExisting) {
-      alert(`SUCCESS: Invoice #${receipt.receiptNumber} updated.`);
-      setIsEditingExisting(false);
-    } else {
-      alert(`POSTED: Invoice #${receipt.receiptNumber} recorded at ${shopSettings.shopName}.`);
-      const currentNum = parseInt(receipt.receiptNumber);
-      const nextNum = isNaN(currentNum) ? '116261' : (currentNum + 1).toString();
-      
-      setReceipt(prev => ({
-        ...prev,
-        receiptNumber: nextNum,
-        relatedInvoiceNo: '',
-        receivedFrom: '',
-        clientAddress: '',
-        clientPhone: '',
-        clientEmail: '',
-        items: [{ id: Math.random().toString(36).substr(2, 9), code: '', description: '', quantity: 1, rate: 0 }],
-        settlementOf: 'Current Order',
+    setMovements(prev => [...newMovements, ...prev]);
+    setReceiptHistory(prev => [currentReceipt, ...prev.filter(r => r.receiptNumber !== currentReceipt.receiptNumber)]);
+    
+    if (!isEditingExisting) {
+      const nextId = (parseInt(receipt.receiptNumber) + 1).toString();
+      setReceipt({
+        ...INITIAL_STATE,
+        receiptNumber: nextId,
         sender: shopSettings,
         location: shopSettings.shopName?.toLowerCase()
-      }));
+      });
     }
+
+    alert("Invoice recorded and stock levels updated.");
     setActiveTab('preview');
   };
 
-  const addManualMovement = (move: StockMovement | StockMovement[]) => {
-    if (Array.isArray(move)) {
-      setMovements(prev => [...move, ...prev]);
+  const handleUpdateLinkedId = (type: 'RECEIPT' | 'TRANSFER_OUT' | 'TRANSFER_IN', primaryId: string, newLinkedId: string) => {
+    if (type === 'RECEIPT') {
+      setReceiptHistory(prev => prev.map(r => r.receiptNumber === primaryId ? { ...r, relatedInvoiceNo: newLinkedId } : r));
     } else {
-      setMovements(prev => [move, ...prev]);
+      setMovements(prev => prev.map(m => (m.type === type && m.reference === primaryId) ? { ...m, associatedWtn: newLinkedId } : m));
     }
   };
 
   const handleDownloadPDF = async () => {
     if (!docToPrintRef.current) return;
     setIsGeneratingPDF(true);
-    
     const win = window as any;
-    const html2pdfLib = win.html2pdf;
-    
-    if (!html2pdfLib) {
-      alert('PDF Engine loading...');
+    if (!win.html2pdf) {
+      alert("PDF library loading error.");
       setIsGeneratingPDF(false);
       return;
     }
-
-    const isReport = activeTab === 'analysis' || activeTab === 'stock' || activeTab === 'tracker';
     const opt = {
       margin: 0,
-      filename: `${shopSettings.shopName}_Doc_${new Date().toISOString().split('T')[0]}.pdf`,
-      image: { type: 'jpeg', quality: 1.0 },
-      html2canvas: { 
-        scale: 3, 
-        useCORS: true, 
-        letterRendering: true,
-        scrollX: 0,
-        scrollY: 0,
-      },
-      jsPDF: { 
-        unit: 'mm', 
-        format: isReport ? 'a4' : 'a5', 
-        orientation: isReport ? 'portrait' : 'landscape', 
-        compress: true 
-      }
+      filename: `ABDESAI_${receipt.receiptNumber}_${receipt.receivedFrom.replace(/\s+/g, '_')}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: activeTab === 'analysis' || activeTab === 'tracker' ? 'landscape' : 'portrait' }
     };
-
     try {
-      window.scrollTo(0,0);
-      await html2pdfLib().set(opt).from(docToPrintRef.current).save();
-    } catch (error) {
-      console.error(error);
-      alert('PDF generation failed.');
+      await win.html2pdf().set(opt).from(docToPrintRef.current).save();
+    } catch (e) {
+      console.error(e);
     } finally {
       setIsGeneratingPDF(false);
     }
   };
 
-  const shareViaWhatsApp = () => {
-    const total = receipt.items.reduce((sum, item) => sum + (item.quantity * item.rate), 0).toFixed(2);
-    const text = encodeURIComponent(`Hello,\nAttached is Invoice #${receipt.receiptNumber} from AB Desai ${shopSettings.shopName}.\nTotal: Rs ${total}\nThank you!`);
-    const phone = receipt.clientPhone ? receipt.clientPhone.replace(/\s+/g, '') : '';
-    window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
-  };
-
-  const adjustScale = (delta: number) => {
-    setScale(prev => Math.min(Math.max(0.4, prev + delta), 2.5));
-  };
-
-  const resetScale = () => {
-    setScale(autoScaleFactor);
-  };
-
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col overflow-hidden">
-      
-      {/* SHOP SETTINGS MODAL */}
-      {showSettingsModal && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-300">
-           <div className="bg-white w-full max-w-2xl rounded-[40px] shadow-2xl overflow-hidden border-8 border-white flex flex-col">
-              <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                 <div className="flex items-center gap-4">
-                    <div className="p-3 bg-red-600 text-white rounded-2xl shadow-lg">
-                       <Store size={24} />
-                    </div>
-                    <div>
-                       <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Branch Setup</h2>
-                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Identify this specific shop location</p>
-                    </div>
-                 </div>
-                 <button onClick={() => setShowSettingsModal(false)} className="p-2 hover:bg-slate-100 rounded-full transition-all text-slate-400"><X size={24}/></button>
+    <div className="min-h-screen bg-slate-100 flex flex-col overflow-hidden">
+      <header className="bg-slate-900 text-white z-[60] h-14 flex items-center px-4 justify-between border-b border-white/5 no-print">
+        <div className="flex items-center gap-4">
+          <HeaderLogo />
+          <div className="relative">
+            <button 
+              onClick={() => setShowBranchMenu(!showBranchMenu)}
+              className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-white/10 transition-all group"
+            >
+              <MapPin size={14} className="text-red-500" />
+              <div className="text-left">
+                <p className="text-[10px] font-black uppercase leading-none text-red-500">{shopSettings.shopName}</p>
+                <p className="text-[7px] font-bold text-slate-400 truncate max-w-[120px]">{shopSettings.address.split(',')[0]}</p>
               </div>
+              <ChevronDown size={14} className={`text-slate-500 transition-transform ${showBranchMenu ? 'rotate-180' : ''}`} />
+            </button>
 
-              <div className="p-8 space-y-8 overflow-y-auto max-h-[70vh] no-scrollbar">
-                 {/* QUICK PRESETS */}
-                 <div>
-                    <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest block mb-4">Select Branch Location</label>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                       {BRANCH_PRESETS.map((preset) => (
-                         <button 
-                            key={preset.shopName}
-                            onClick={() => setShopSettings({ ...shopSettings, ...preset })}
-                            className={`p-3 rounded-2xl border-2 transition-all flex flex-col items-center gap-1.5 ${shopSettings.shopName === preset.shopName ? 'border-red-600 bg-red-50 text-red-700 shadow-md' : 'border-slate-100 bg-white text-slate-500 hover:border-slate-300'}`}
-                         >
-                            <MapPin size={16} />
-                            <span className="text-[10px] font-black tracking-tight">{preset.shopName}</span>
-                         </button>
-                       ))}
-                    </div>
-                 </div>
-
-                 <div className="grid grid-cols-2 gap-6 pt-4 border-t border-slate-100">
-                    <div className="col-span-2">
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Manual Shop Name / ID</label>
-                       <input 
-                         value={shopSettings.shopName} 
-                         onChange={e => setShopSettings({...shopSettings, shopName: e.target.value.toUpperCase()})}
-                         className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-red-500/10 focus:border-red-500 font-black text-sm uppercase"
-                       />
-                    </div>
-                    <div className="col-span-2">
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Branch Address</label>
-                       <textarea 
-                         rows={2}
-                         value={shopSettings.address} 
-                         onChange={e => setShopSettings({...shopSettings, address: e.target.value})}
-                         className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-red-500/10 focus:border-red-500 font-bold text-sm resize-none"
-                       />
-                    </div>
-                    <div>
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Branch Phone</label>
-                       <input 
-                         value={shopSettings.phone} 
-                         onChange={e => setShopSettings({...shopSettings, phone: e.target.value})}
-                         className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-red-500/10 focus:border-red-500 font-black text-sm"
-                       />
-                    </div>
-                    <div>
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 text-slate-300">Corporate Name (Locked)</label>
-                       <input readOnly value={shopSettings.name} className="w-full px-5 py-3 bg-slate-100 border border-slate-200 rounded-2xl text-slate-400 font-black text-xs cursor-not-allowed" />
-                    </div>
-                 </div>
-
-                 <div className="p-5 bg-blue-50 rounded-3xl border border-blue-100 flex gap-4 shadow-sm">
-                    <div className="p-2 bg-blue-600 text-white rounded-xl h-fit">
-                       <Info size={16} />
-                    </div>
-                    <p className="text-[10px] font-black text-blue-800 uppercase leading-relaxed">
-                       This configuration is stored <span className="underline">locally</span> in this browser. If you have 8 different shops on 8 different machines, simply open this link on each machine and select the correct branch once.
-                    </p>
-                 </div>
+            {showBranchMenu && (
+              <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200 z-[70]">
+                <div className="p-3 bg-slate-50 border-b border-slate-100 text-[9px] font-black text-slate-400 uppercase tracking-widest">Select Branch Location</div>
+                <div className="max-h-72 overflow-y-auto">
+                  {BRANCH_PRESETS.map((branch) => (
+                    <button 
+                      key={branch.shopName}
+                      onClick={() => {
+                        setShopSettings({ ...CORPORATE_IDENTITY, ...branch });
+                        setShowBranchMenu(false);
+                      }}
+                      className={`w-full text-left px-4 py-3 hover:bg-red-50 flex items-center gap-3 border-b border-slate-50 last:border-0 transition-colors ${shopSettings.shopName === branch.shopName ? 'bg-red-50' : ''}`}
+                    >
+                      <Store size={16} className={shopSettings.shopName === branch.shopName ? 'text-red-600' : 'text-slate-300'} />
+                      <div>
+                        <p className={`text-[10px] font-black uppercase ${shopSettings.shopName === branch.shopName ? 'text-red-600' : 'text-slate-900'}`}>{branch.shopName}</p>
+                        <p className="text-[8px] font-bold text-slate-400 truncate">{branch.address}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
-
-              <div className="p-8 bg-slate-50 border-t border-slate-100 flex justify-end">
-                 <button 
-                    onClick={() => {
-                       setShowSettingsModal(false);
-                       alert(`AB Desai - ${shopSettings.shopName} profile activated on this device.`);
-                    }}
-                    className="px-12 py-4 bg-slate-900 text-white rounded-[24px] text-xs font-black uppercase tracking-widest shadow-xl hover:bg-black transition-all active:scale-95 border-b-4 border-slate-950"
-                 >
-                    Save Shop Profile
-                 </button>
-              </div>
-           </div>
+            )}
+          </div>
         </div>
-      )}
 
-      <header className="bg-slate-900 text-white z-50 shadow-2xl no-print shrink-0 border-b border-white/5">
-        <div className="w-full px-6 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4 shrink-0">
-            <HeaderLogo />
-            <div className="hidden lg:block">
-              <h1 className="text-lg font-black uppercase tracking-[0.2em] leading-none">AB Desai</h1>
-              <div className="flex items-center gap-1.5 mt-1 bg-red-600/20 px-2 py-0.5 rounded border border-red-600/30">
-                 <MapPin size={10} className="text-red-500" />
-                 <p className="text-[9px] font-black text-red-500 uppercase tracking-widest truncate max-w-[150px]">
-                    {shopSettings.shopName}
-                 </p>
-              </div>
-            </div>
-          </div>
+        <nav className="flex items-center gap-1 bg-slate-800 p-1 rounded-xl">
+          <button onClick={() => setActiveTab('form')} className={`px-4 py-1.5 rounded-lg text-[10px] font-black transition-all ${activeTab === 'form' ? 'bg-white text-slate-900' : 'text-slate-400 hover:text-white'}`}>EDITOR</button>
+          <button onClick={() => setActiveTab('preview')} className={`px-4 py-1.5 rounded-lg text-[10px] font-black transition-all ${activeTab === 'preview' ? 'bg-white text-slate-900' : 'text-slate-400 hover:text-white'}`}>PREVIEW</button>
+          <button onClick={() => setActiveTab('analysis')} className={`px-4 py-1.5 rounded-lg text-[10px] font-black transition-all ${activeTab === 'analysis' ? 'bg-white text-slate-900' : 'text-slate-400 hover:text-white'}`}>SALES LOG</button>
+          <button onClick={() => setActiveTab('stock')} className={`px-4 py-1.5 rounded-lg text-[10px] font-black transition-all ${activeTab === 'stock' ? 'bg-white text-slate-900' : 'text-slate-400 hover:text-white'}`}>INVENTORY</button>
+          <button onClick={() => setActiveTab('tracker')} className={`px-4 py-1.5 rounded-lg text-[10px] font-black transition-all ${activeTab === 'tracker' ? 'bg-white text-slate-900' : 'text-slate-400 hover:text-white'}`}>TRACKER</button>
+        </nav>
 
-          <div className="flex items-center gap-1 bg-slate-800 p-1 rounded-2xl border border-white/10 shadow-lg shrink-0 overflow-x-auto no-scrollbar">
-            <button
-              onClick={() => setActiveTab('form')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black transition-all whitespace-nowrap ${activeTab === 'form' ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
-            >
-              <Layout size={14} /> EDITOR
-            </button>
-            <button
-              onClick={() => setActiveTab('preview')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black transition-all whitespace-nowrap ${activeTab === 'preview' ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
-            >
-              <FileText size={14} /> PREVIEW
-            </button>
-            <button
-              onClick={() => setActiveTab('stock')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black transition-all whitespace-nowrap ${activeTab === 'stock' ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
-            >
-              <Boxes size={14} /> STOCK
-            </button>
-            <button
-              onClick={() => setActiveTab('tracker')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black transition-all whitespace-nowrap ${activeTab === 'tracker' ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
-            >
-              <ClipboardList size={14} /> TRACKER
-            </button>
-            <button
-              onClick={() => setActiveTab('analysis')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black transition-all whitespace-nowrap ${activeTab === 'analysis' ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
-            >
-              <BarChart3 size={14} /> HISTORY
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            <button 
-              onClick={() => setShowSettingsModal(true)}
-              className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl border border-white/10 transition-all shadow-lg"
-              title="Shop Selection"
-            >
-              <Settings size={18} />
-            </button>
-
-            <button 
-              onClick={handleDownloadPDF} 
-              disabled={isGeneratingPDF}
-              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[10px] font-black transition-all border-b-4 border-blue-800 disabled:opacity-50"
-            >
-              <Download size={14} /> PDF
-            </button>
-
-            <button 
-              onClick={validateAndPost}
-              className={`flex items-center gap-2 px-4 py-2.5 ${isEditingExisting ? 'bg-emerald-600 border-emerald-800' : 'bg-[#c02428] border-red-900'} text-white rounded-xl text-[10px] font-black transition-all border-b-4`}
-            >
-              {isEditingExisting ? <Save size={16} /> : <CheckCircle2 size={16} />} 
-              {isEditingExisting ? 'UPDATE' : 'POST'}
-            </button>
-          </div>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={handleDownloadPDF} 
+            disabled={isGeneratingPDF}
+            className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 transition-all border border-white/5"
+          >
+            {isGeneratingPDF ? <RefreshCw className="animate-spin" size={18}/> : <Download size={18}/>}
+          </button>
+          <button onClick={validateAndPost} className="bg-red-600 hover:bg-red-500 px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all shadow-lg border-b-4 border-red-900 active:translate-y-0.5 active:border-b-0">
+            {isEditingExisting ? 'SAVE UPDATE' : 'POST INVOICE'}
+          </button>
         </div>
       </header>
 
       <main className="flex-1 flex overflow-hidden">
-        <div className="flex-1 flex flex-col xl:flex-row w-full h-full p-4 gap-6">
-          <div className={`w-full xl:w-[460px] shrink-0 h-full flex flex-col gap-4 ${activeTab !== 'form' ? 'hidden xl:flex' : 'flex'}`}>
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 flex flex-col h-full overflow-hidden">
-               <ReceiptForm 
-                  receipt={receipt} 
-                  onUpdate={handleUpdate} 
-                  productList={productList}
-                  setProductList={setProductList}
-                  onValidate={validateAndPost}
-                  receiptHistory={receiptHistory}
-                  onRecall={handleRecall}
-                  isEditing={isEditingExisting}
-                />
+        {/* Always visible form for quick editing */}
+        <div className="w-[380px] bg-white border-r border-slate-200 overflow-y-auto no-scrollbar no-print">
+          <ReceiptForm 
+            receipt={receipt} 
+            onUpdate={handleUpdate} 
+            productList={productList}
+            setProductList={setProductList}
+            onValidate={validateAndPost}
+            receiptHistory={receiptHistory}
+            onRecall={handleRecall}
+            isEditing={isEditingExisting}
+          />
+        </div>
+        
+        {/* Main viewing area */}
+        <div className="flex-1 relative bg-slate-200/50 flex flex-col items-center p-10 overflow-auto no-scrollbar">
+          <div className="preview-scale-wrapper" style={{ transform: `scale(${scale})`, transformOrigin: 'top center' }}>
+            <div ref={docToPrintRef} className="bg-white shadow-2xl">
+              {activeTab === 'form' && <ReceiptPreview receipt={receipt} />}
+              {activeTab === 'preview' && <ReceiptPreview receipt={receipt} />}
+              {activeTab === 'analysis' && <SalesAnalysis history={receiptHistory} onDownload={handleDownloadPDF} />}
+              {activeTab === 'stock' && <StockManager movements={movements} productList={productList} setProductList={setProductList} onAddMovement={(m) => setMovements(prev => Array.isArray(m) ? [...m, ...prev] : [m, ...prev])} />}
+              {activeTab === 'tracker' && <VoucherTracker history={receiptHistory} movements={movements} onDownload={handleDownloadPDF} onUpdateLinkedId={handleUpdateLinkedId} />}
             </div>
           </div>
 
-          <div className={`flex-1 h-full rounded-[48px] bg-slate-200/40 border border-slate-300/50 flex flex-col overflow-hidden relative shadow-inner ${activeTab === 'form' ? 'hidden xl:flex' : 'flex'}`}>
-            <div ref={containerRef} className="flex-1 overflow-auto p-10 flex items-start justify-start bg-[radial-gradient(#cbd5e1_1.5px,transparent_1.5px)] [background-size:32px_32px] relative scroll-smooth">
-              <div 
-                className="preview-scale-wrapper flex items-start justify-start" 
-                style={{ 
-                  transform: `scale(${scale})`,
-                  width: (activeTab === 'analysis' || activeTab === 'stock' || activeTab === 'tracker') ? `${793 * scale}px` : `${770 * scale}px`,
-                  minWidth: (activeTab === 'analysis' || activeTab === 'stock' || activeTab === 'tracker') ? '793px' : '770px',
-                  height: 'auto',
-                  transformOrigin: 'top left'
-                }}
-              >
-                 <div ref={docToPrintRef} className="bg-white shadow-2xl print-reset" style={{ width: (activeTab === 'analysis' || activeTab === 'stock' || activeTab === 'tracker') ? '793px' : '770px' }}>
-                    {activeTab === 'analysis' && <SalesAnalysis history={receiptHistory} onDownload={handleDownloadPDF} isDownloading={isGeneratingPDF} />}
-                    {activeTab === 'preview' && <ReceiptPreview receipt={receipt} />}
-                    {activeTab === 'tracker' && (
-                      <VoucherTracker 
-                        history={receiptHistory} 
-                        movements={movements} 
-                        onDownload={handleDownloadPDF} 
-                        isDownloading={isGeneratingPDF} 
-                        onUpdateLinkedId={handleUpdateLinkedId}
-                      />
-                    )}
-                    {activeTab === 'stock' && (
-                      <StockManager 
-                        movements={movements} 
-                        productList={productList} 
-                        setProductList={setProductList}
-                        onAddMovement={addManualMovement}
-                      />
-                    )}
-                 </div>
-              </div>
-            </div>
-
-            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-1 p-2 bg-slate-900/90 backdrop-blur-md rounded-2xl border border-white/20 shadow-[0_20px_50px_rgba(0,0,0,0.3)] no-print z-50">
-               <button 
-                  onClick={() => adjustScale(-0.1)} 
-                  className="p-3 text-white hover:bg-white/10 rounded-xl transition-all"
-                  title="Zoom Out"
-               >
-                 <ZoomOut size={18} />
-               </button>
-               <div className="w-[1px] h-6 bg-white/10 mx-1"></div>
-               <button 
-                  onClick={resetScale} 
-                  className="px-4 py-2 text-white hover:bg-white/10 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-2"
-                  title="Fit to Screen"
-               >
-                 <Maximize size={16} /> {Math.round(scale * 100)}%
-               </button>
-               <div className="w-[1px] h-6 bg-white/10 mx-1"></div>
-               <button 
-                  onClick={() => adjustScale(0.1)} 
-                  className="p-3 text-white hover:bg-white/10 rounded-xl transition-all"
-                  title="Zoom In"
-               >
-                 <ZoomIn size={18} />
-               </button>
-            </div>
+          <div className="fixed bottom-8 flex items-center gap-2 bg-slate-900/90 text-white p-2 rounded-2xl border border-white/20 shadow-2xl no-print">
+            <button onClick={() => setScale(Math.max(0.4, scale - 0.05))} className="p-2 hover:bg-white/10 rounded-lg"><ZoomOut size={16}/></button>
+            <span className="text-[10px] font-black px-2 w-12 text-center">{Math.round(scale * 100)}%</span>
+            <button onClick={() => setScale(Math.min(1.5, scale + 0.05))} className="p-2 hover:bg-white/10 rounded-lg"><ZoomIn size={16}/></button>
           </div>
         </div>
       </main>
+
+      <style>{`
+        .preview-scale-wrapper { transition: transform 0.1s ease-out; }
+        @media print {
+          .no-print { display: none !important; }
+          .print-reset { transform: none !important; width: 100% !important; margin: 0 !important; box-shadow: none !important; border: none !important; }
+          body, html { overflow: visible !important; height: auto !important; }
+        }
+      `}</style>
     </div>
   );
 };
