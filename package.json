@@ -11,8 +11,8 @@
   },
   "dependencies": {
     "@google/genai": "^1.40.0",
-    "lucide-react": "^0.463.0",
-    "papaparse": "^5.4.1",
+    "lucide-react": "^0.563.0",
+    "papaparse": "^5.5.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "xlsx": "0.18.5"
